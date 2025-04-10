@@ -1,2 +1,2 @@
-# Microsoft SQL Server
-Microsoft SQL Server syntax and queries
+# SQL Server
+SQL Server syntax and queries
