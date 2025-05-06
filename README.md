@@ -1,1 +1,1 @@
-# SQL Server（T-SQL）
+# SQL Server
