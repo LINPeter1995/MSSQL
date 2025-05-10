@@ -1,1 +1,1 @@
-# MSSQLServer
+# SQLServer
