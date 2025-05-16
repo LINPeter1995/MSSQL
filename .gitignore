@@ -1,4 +1,6 @@
+# 資料庫檔案
 *.mdf
 *.ldf
-*.mdf
-*.ldf
+
+# PDF 文件
+*.pdf
