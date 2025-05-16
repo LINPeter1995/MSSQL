@@ -1,0 +1,8 @@
+# 讓 VSCode 或支援 EditorConfig 的編輯器自動套用設定
+root = true
+
+# 專門針對 .sql 檔案
+[*.sql]
+charset = big5
+end_of_line = lf
+insert_final_newline = true
