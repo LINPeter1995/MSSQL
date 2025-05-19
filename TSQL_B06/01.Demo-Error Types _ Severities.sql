@@ -1,113 +1,93 @@
-1--	Module 6   T-SQL ?{???????~?T??
---		6-1: ???~?T?????????�Z????????
---		6-2: ?z?LERROR_XXX()?t?�Z????o???~?T??
---		6-3: ?t?�Z??@@ERROR ?PERROR_NUMBER()???????t??
+-- Module 6：T-SQL 錯誤處理與系統錯誤訊息
+-- 6-1: 常見的 T-SQL 錯誤類型與例子
+-- 6-2: 使用 ERROR_XXX() 函數捕捉錯誤
+-- 6-3: 使用 @@ERROR 和 ERROR_NUMBER() 錯誤追蹤方法
 
---	???~?T???s?? : ?�Z??????~?T???????????@???~???X
---	https://docs.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver15
+-- 錯誤訊息查詢（建議收藏）：
+-- 官方文件：SQL Server 錯誤與事件代碼總表
+-- https://docs.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver15
 
---  ???~?T???Y????h??(Seveirity) : ?|??^?Y????C???d??0-24, ???Y????C (??p : 0~9) ?????~
---					????O "???T??" ?? "?C????i" , ?Y??????????~???????????B?z?????D
--- https://docs.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-error-severities?view=sql-server-ver15
+-- 錯誤嚴重性（Severity）說明：
+-- 錯誤等級從 0~24，越高代表問題越嚴重：
+-- - 0~9 通常為訊息提示
+-- - 10~16 屬於使用者錯誤（如語法錯誤、資料不存在）
+-- - 17~24 為系統錯誤（資源不足、磁碟故障等）
+-- 詳細說明：https://docs.microsoft.com/zh-tw/sql/relational-databases/errors-events/database-engine-error-severities?view=sql-server-ver15
 
+-- Lab：01.Demo - Error types and Severities.sql
 
---	01.Demo - Error types and Severities.sql
--- Step 1: Open a new query window to MarketDev
-use  AdventureWorks ;
+-- Step 1：使用 AdventureWorks 資料庫
+use AdventureWorks;
 go
 
--- Step 2: Note the returned error from a "syntax error"
---              ??? WebSite ???~?T???s??
-
-selec  *  from  Person.Person ;  --  'selec' ???? '*' ???B???y?k?????T?C
+-- Step 2：語法錯誤的範例（select 拼錯為 selec）
+selec * from Person.Person;  -- 'selec' 是錯誤拼字，會造成語法錯誤
 go
 
--- Step 3: Note the returned error from an "object resolution error"
---              Describe each returned entry in the error message
-select  *  from  Dog ;						-- ?L???????W?? 'Dog'
+-- Step 3：物件解析錯誤（查詢不存在的資料表）
+select * from Dog;           -- 資料表 'Dog' 不存在，會報錯
 go
 
-
--- Step 4: Note the returned error from a runtime error
---              Describe each returned entry in the error message
---              and show how double-clicking the error in the messages
---              tab takes you directly to the error
-select  12/0 ;								-- ?o?{???H?s?????~?C
+-- Step 4：執行時錯誤（除以 0）
+select 12/0;                 -- 除以 0 會引發執行時錯誤
 go
 
-select * from  sys.messages
+-- Step 5：查詢系統錯誤訊息 sys.messages 的內容
+-- 顯示所有語言的錯誤訊息
+select * from sys.messages;
 
-
--- Step 5: Query the contents of the sys.messages view
---              Note the language_id settings
+-- 只查詢繁體中文（language_id = 1028）的錯誤訊息
 select * from sys.messages 
-where language_id=1028						-- ????
+where language_id = 1028
 order by language_id, message_id;
 go
 
--- Step 6: Query the English messages only with severity 19 or above. 
---              Note the is_event_logged column
-select * from  sys.messages
-where  language_id = 1033 and  severity >= 19			-- ?^??
-order by  severity,  message_id ;
+-- Step 6：只查詢英文（language_id = 1033），嚴重性大於等於 19 的錯誤訊息
+-- 並注意是否會被記錄（is_event_logged 欄位）
+select * from sys.messages
+where language_id = 1033 and severity >= 19
+order by severity, message_id;
 
+select * from sys.messages
+where language_id = 1028 and severity >= 19
+order by severity, message_id;
 
-select * from  sys.messages
-where  language_id = 1028 and severity >= 19
-order by severity,  message_id ;
+-- 📌 額外補充：如何自訂錯誤訊息
+-- sp_addmessage：新增自訂錯誤訊息（自訂的錯誤碼建議從 50001 開始）
 
-
--- ?Q?? sp_AddMessage????q???~?T??,  ???~?N?X?????? 50001 ?}?l
--- ?z???????[?J???T???? us_english ?????~??[?J '?c?�\??' ?????C
-
+-- 語法：
 -- sp_addmessage 
---    [ @msgnum = ] msg_id , 
---    [ @severity = ] severity , 
---    [ @msgtext = ] 'msg'
---    [ , [ @lang = ] 'language' ]
---    [ , [ @with_log = ] 'with_log' ]
---    [ , [ @replace = ] 'replace' ]
+--     @msgnum = 錯誤編號,
+--     @severity = 錯誤嚴重度 (1~24),
+--     @msgtext = N'錯誤內容',
+--     @lang = '語言'（如 us_english、中文繁體為中文代碼),
+--     @with_log = 'with_log'（可選，寫入 Windows 事件記錄）,
+--     @replace = 'replace'（可選，允許覆蓋）
 
---  msg_id		?G?o?O?T??????O?X?C????w?q???~?T???? msg_id 
---						?????O 50,001 ~ 2,147,483,647 ?????????C
---  severity	?G?o?O???~???Y????h??C??????h??d??O 1 ~ 24?C
---  msg			?G?o?O???~?T??????r?C msg ?O nvarchar(255)?A?w?]??O NULL?C
---  language	?G?T?????y???C
---  with_log	?G?T???X?{??A?O?_?N?T???g?J Windows ???�`{???O??????C
---  replace	?G?p?G???w?? replace ?r??A?N?|?H?s???T????r?M?Y????h?????g?{???????~?T???C
---						?[?J?o????A????O?n?????~?T???C
-
---delete from sys.messages
---where message_id >50000
-
-exec sp_AddMessage 	
+-- 實例：新增英文錯誤訊息
+exec sp_addmessage 	
 	@msgnum = 50003, 
 	@severity = 16,
-    @msgtext = N'The New Employee (%s) is Exist.',
-	@lang = 'us_english'
+    @msgtext = N'The New Employee (%s) already exists.',
+	@lang = 'us_english';
 
+-- 新增繁體中文版本
 exec sp_addmessage 
 	@msgnum = 50003, 
 	@severity = 16,
-    @msgtext = N'?s?W???u(%1!)?w?s?b',
-	@lang = N'?c?�\??'
+    @msgtext = N'新員工 (%1!) 已存在',
+	@lang = N'zh-tw';
 
--- ?[??@?U 50003
+-- 查詢自訂錯誤訊息（50000以上）
+select * from sys.messages
+where message_id > 49958;
 
-select * from  sys.messages
-where  message_id>49958
+-- 觸發錯誤訊息
+raiserror(50003, 12, 1, 'John');
 
+-- 刪除錯誤訊息（所有語言）
+exec sp_dropmessage 50003, @lang = 'all';
 
--- raise error 50001
-raiserror(50003,12,1, 'John')
-
-
-
---  ?R????q???~?T??
---  sp_dropmessage ?G?R????q???~?T??
---  sp_dropmessage [ @msgnum = ] message_number 
---								[ , [ @lang = ] 'language'?Uall ]   --all:?R??????y??????
-exec sp_dropmessage 50003, @lang='all'
-
-select * from  sys.messages
-where  message_id>49958
+-- 再次確認已刪除
+select * from sys.messages
+where message_id > 49958;
